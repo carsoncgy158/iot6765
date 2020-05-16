@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Place Autocomplete and Directions</title>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+    <style>
+      /* Always set the map height explicitly to define the size of the div
+       * element that contains the map. */
+      #map {
+        height: 100%;
+      }
+      /* Optional: Makes the sample page fill the window. */
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      .controls {
+        margin-top: 10px;
+        border: 1px solid transparent;
+        border-radius: 2px 0 0 2px;
+        box-sizing: border-box;
+        -moz-box-sizing: border-box;
+        height: 32px;
+        outline: none;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+      }
+
+      #origin-input,
+      #destination-input {
+        background-color: #fff;
+        font-family: Roboto;
+        font-size: 15px;
+        font-weight: 300;
+        margin-left: 12px;
+        padding: 0 11px 0 13px;
+        text-overflow: ellipsis;
+        width: 200px;
+      }
+
+      #origin-input:focus,
+      #destination-input:focus {
+        border-color: #4d90fe;
+      }
+
+      #mode-selector {
+        color: #fff;
+        background-color: #4d90fe;
+        margin-left: 12px;
+        padding: 5px 11px 0px 11px;
+      }
+
+      #mode-selector label {
+        font-family: Roboto;
+        font-size: 13px;
+        font-weight: 300;
+      }
+
+    </style>
+  </head>
+  <body>
+    <div style="display: none">
+        <input id="origin-input" class="controls" type="text"
+            placeholder="Enter an origin location">
+
+        <input id="destination-input" class="controls" type="text"
+            placeholder="Enter a destination location">
+
+        <div id="mode-selector" class="controls">
+          <input type="radio" name="type" id="changemode-walking" >
+          <label for="changemode-walking">Walking</label>
+
+          <input type="radio" name="type" id="changemode-transit">
+          <label for="changemode-transit">Transit</label>
+
+          <input type="radio" name="type" id="changemode-driving" checked="checked">
+          <label for="changemode-driving">Driving</label>
+        </div>
+
+    </div>
+
+    <button onclick="simu()">Start simu</button>
+    <button onclick="clearInterval(carMove)">Stop simu</button>
+    <p id = "debugArea"></p>
+    <p id = "debugArea1"></p>
+    <p id = "debugArea2"></p>
+    <p id = "debugArea3"></p>
+    <p id = "debugArea4"></p>
+    <p id = "debugArea5"></p>
+    <p id = "debugArea6"></p>
+    <p id = "debugArea7"></p>
+    <p id = "debugArea8"></p>
+    <p id = "debugArea9"></p>
+    <p id = "debugArea10"></p>
+    <p id = "debugArea11"></p>
+    <p id = "debugArea12"></p>
+
+    <div id="map"></div>
+
+    <script>
+// This example requires the Places library. Include the libraries=places
+// parameter when you first load the API. For example:
+// <script
+// src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=places">
+
+
+
+
+window.test = 0;
+// function getMoveDir(){
+//   var weight = 100.0;
+//   var moveStard = [];
+//   var moveDirection = {"lat":0,"lng":0};
+//   for (var i = 0; i < tempCordi.length-1; i++){
+//       moveDirection.lat = (tempCordi[i+1].lat()-tempCordi[i].lat())/weight;
+//       moveDirection.lng = (tempCordi[i+1].lng()-tempCordi[i].lng())/weight;
+//       // console.log(moveDirection);
+//       moveStard.push(moveDirection);
+//       console.log(moveStard);
+//   }
+//   return moveStard;
+// }
+
+function calDistance(x1,y1,x2,y2){
+  return Math.sqrt(Math.pow((x1-x2),2) + Math.pow((y1-y2),2));
+}
+function moveMarker() {
+          //delayed so you can see it move
+          curLat = tempCordi[0].lat();
+          curLng = tempCordi[0].lng();
+          currentSpeed = 0; //
+          currentleg = 0;
+          currentArriveFlag = 0;
+          createItem();
+          veloLat = 0;
+          veloLng = 0;
+          updateData = {reach_destination: 0, greenwave_speed: 0, current_route_num: 0, current: "current"};
+          //moveStard = [];// this is used to record basic lat and lng step in every leg
+          stdlen = 0.00001;
+          var stdlat = 0;
+          var stdlng = 0;
+          var moveStard = [];
+          for (var i = 0; i < tempCordi.length-1; i++){
+              // var weight = 50.0;
+              var moveDirection = {"lat":0,"lng":0};
+              // weight  = weight * Math.abs(0.0001/(tempCordi[i+1].lat()-tempCordi[i].lat()));
+              var temp = calDistance(tempCordi[i+1].lat(),tempCordi[i+1].lng(),tempCordi[i].lat(),tempCordi[i].lng());
+              // console.log(temp);
+              // weight  = weight * Math.abs(0.0001/temp);
+              // console.log(temp);
+
+              moveDirection.lat = (stdlen/temp)*(tempCordi[i+1].lat()-tempCordi[i].lat());
+              moveDirection.lng = (stdlen/temp)*(tempCordi[i+1].lng()-tempCordi[i].lng());
+              // console.log(moveDirection);
+              moveStard.push(moveDirection);
+              // console.log(moveDirection);
+              console.log(moveStard);
+              //setInterval(function (){},10000);
+          }
+
+
+          //var moveStard = getMoveDir();
+
+          //console.log(moveStard);
+
+          veloLat = currentSpeed * moveStard[currentleg].lat;
+          veloLng = currentSpeed * moveStard[currentleg].lng;
+
+          carMove = setInterval( function (){
+              curLat = marker.getPosition().lat();
+              curLng = marker.getPosition().lng();
+
+              veloLat = currentSpeed * moveStard[currentleg].lat;
+              veloLng = currentSpeed * moveStard[currentleg].lng;
+              if (currentArriveFlag){
+                veloLat = 0;
+                veloLng = 0;
+              }
+              curLat+=veloLat;
+              curLng+=veloLng;
+              center = new google.maps.LatLng(curLat,curLng);
+              //marker.setMap( map );
+              marker.setPosition( center );
+              map.panTo( center );
+          }, 500 );
+
+
+          getGuide = setInterval( function (){
+
+              readItem();
+              currentSpeed = updateData.greenwave_speed; //
+              currentleg = updateData.current_route_num;
+              currentArriveFlag = updateData.reach_destination;
+              //{reach_destination: 0, greenwave_speed: 30.5, current_route_num: 3, current: "current"}
+              //console.log(data);
+              //updateItem();
+              createItem();//used  to update data
+              // currentSpeed = null;
+              // currentSpeed = null; //
+              // currentleg = ;
+              // currentArriveFlag = ;
+          }, 250 );
+
+      };
+
+function simu(){
+  window.test+=1;
+  // debugArea12.innerHTML = window.test;
+  // debugArea5.innerHTML = "tempCordi again"+tempCordi[0].lat();
+  // var routeCordi = handler.routeCordi;
+  // debugArea6.innerHTML = handler.travelMode;
+  // debugArea7.innerHTML = "handler.routeCordi"+handler.routeCordi[0].lat();
+  // debugArea8.innerHTML = "routeCordi"+routeCordi[0].lat();
+  var oriLat = tempCordi[0].lat();
+  var oriLng = tempCordi[0].lng();
+  debugArea8.innerHTML = "ori:"+oriLat;
+
+  // for (var i = 0; i < tempCordi.length; i++){
+  //     debugArea8.innerHTML += "("+tempCordi[i].lat()+",";
+  //     debugArea8.innerHTML += tempCordi[i].lng()+");";
+  // }
+  //image = 'https://www.html.cn/static/images/logo.png';
+
+  //marker = new google.maps.Marker({position: {lat: 40.7703, lng: -73.9914}, map:mapG,icon:image});
+  //debugArea11.innerHTML = 50;
+  center = new google.maps.LatLng(oriLat,oriLng);
+  marker.setPosition( center );
+  map.panTo( center );
+
+  //debugArea11.innerHTML = 100;
+  // moveMarker( map, marker );
+  // curLat = tempCordi[0].lat();
+  // curLng = tempCordi[0].lng();
+  moveMarker();
+
+  // function moveMarker( map, marker ) {
+
+}
+
+function initMap() {
+  map = new google.maps.Map(document.getElementById('map'), {
+    mapTypeControl: true,
+    center: {lat: 40.7703, lng: -73.9914},
+    zoom: 15,
+    mapTypeId: google.maps.MapTypeId.ROADMAP,
+  });
+
+  //var image = 'https://www.html.cn/static/images/logo.png';
+
+  //var marker = new google.maps.Marker({position: {lat: 40.7703, lng: -73.9914}, map: map,icon:image});
+
+  handler = new AutocompleteDirectionsHandler(map);
+
+  image = 'https://www.html.cn/static/images/logo.png';
+  image1 = "http://getdrawings.com/free-icon/gps-car-icon-52.png";
+  image2 = "http://maps.google.com/mapfiles/ms/icons/blue-dot.png";
+
+  marker = new google.maps.Marker({position: {lat: 40.7703, lng: -73.9914}, map:map,icon:image2});
+  // curLat = marker.getPosition().lat();
+  // curLng = marker.getPosition().lng();
+  //moveStard = []
+  //var simulation = new simu(handler);
+  window.test = 1;
+  AWS.config.update({
+  region: "us-east-1",
+  endpoint: 'https://dynamodb.us-east-1.amazonaws.com',
+  // accessKeyId default can be used while using the downloadable version of DynamoDB.
+  // For security reasons, do not store AWS Credentials in your files. Use Amazon Cognito instead.
+  accessKeyId: "AKIA3RPH47YB2HW4QWE4",
+  // secretAccessKey default can be used while using the downloadable version of DynamoDB.
+  // For security reasons, do not store AWS Credentials in your files. Use Amazon Cognito instead.
+  secretAccessKey: "M+PqwBj2O5Uq1Zn2P/H4aT0cOceqRgQCS1xH6Wsn"
+  });
+// AKIA3RPH47YB2HW4QWE4
+// M+PqwBj2O5Uq1Zn2P/H4aT0cOceqRgQCS1xH6Wsn
+
+  //dynamodb = new AWS.DynamoDB();
+  docClient = new AWS.DynamoDB.DocumentClient();
+
+  tableFront = "front";
+  tableBack = "back";
+  //createMovies();
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function readItem() {
+
+    var current = "current";
+    var backData = null;
+    var params = {
+        TableName: tableBack,
+        Key:{
+            "current": current,
+        }
+    };
+    docClient.get(params, function(err, data) {
+        if (err) {
+            //document.getElementById('textarea').innerHTML = "Unable to read item: " + "\n" + JSON.stringify(err, undefined, 2);
+            console.log("read data failed");
+        } else {
+            //document.getElementById('textarea').innerHTML = "GetItem succeeded: " + "\n" + JSON.stringify(data, undefined, 2);
+
+            console.log("read data success");
+            backData = data.Item;
+            updateData.reach_destination = data.Item.reach_destination;
+            updateData.greenwave_speed = data.Item.greenwave_speed;
+            updateData.current_route_num = data.Item.current_route_num;
+            //{reach_destination: 0, greenwave_speed: 30.5, current_route_num: 3, current: "current"}
+            //document.getElementById('debugArea11').innerHTML = "ReadItem succeeded: " + "\n" + JSON.stringify(data, undefined, 2);
+            //document.getElementById('debugArea11').innerHTML = data;
+            console.log(backData);
+        }
+    });
+    return backData;
+}
+
+function createItem() {
+    var params = {
+        TableName :tableFront,
+        Item:{
+          "current": "1",
+          "currentSpeed": currentSpeed,
+          "currentPosition":{"lat":curLat,"lng":curLng},
+          "origin":(tempCordi[0].lat())+","+(tempCordi[0].lng()),
+          "destination":(tempCordi[tempCordi.length-1].lat())+","+(tempCordi[tempCordi.length-1].lng()),
+        }
+    };
+    docClient.put(params, function(err, data) {
+        if (err) {
+            //document.getElementById('textarea').innerHTML = "Unable to add item: " + "\n" + JSON.stringify(err, undefined, 2);
+            console.log("put data failed");
+        } else {
+            // document.getElementById('debugArea10').innerHTML = "PutItem succeeded: " + "\n" + JSON.stringify(data);
+            console.log("put data success");
+        }
+    });
+}
+
+
+
+/**
+ * @constructor
+ */
+function AutocompleteDirectionsHandler(map) {
+  this.map = map;
+  this.originPlaceId = null;
+  this.destinationPlaceId = null;
+  this.travelMode = 'WALKING';
+  this.directionsService = new google.maps.DirectionsService;
+  this.directionsRenderer = new google.maps.DirectionsRenderer;
+  this.directionsRenderer.setMap(map);
+  this.routeCordi = [];
+
+  var trafficLayer = new google.maps.TrafficLayer();
+  trafficLayer.setMap(map);
+
+  var originInput = document.getElementById('origin-input');
+  var destinationInput = document.getElementById('destination-input');
+  var modeSelector = document.getElementById('mode-selector');
+
+  var originAutocomplete = new google.maps.places.Autocomplete(originInput);
+  // Specify just the place data fields that you need.
+  originAutocomplete.setFields(['place_id']);
+
+  var destinationAutocomplete =
+      new google.maps.places.Autocomplete(destinationInput);
+  // Specify just the place data fields that you need.
+  destinationAutocomplete.setFields(['place_id']);
+
+  this.setupClickListener('changemode-walking', 'WALKING');
+  this.setupClickListener('changemode-transit', 'TRANSIT');
+  this.setupClickListener('changemode-driving', 'DRIVING');
+
+  this.setupPlaceChangedListener(originAutocomplete, 'ORIG');
+  this.setupPlaceChangedListener(destinationAutocomplete, 'DEST');
+
+  this.map.controls[google.maps.ControlPosition.TOP_LEFT].push(originInput);
+  this.map.controls[google.maps.ControlPosition.TOP_LEFT].push(
+      destinationInput);
+  this.map.controls[google.maps.ControlPosition.TOP_LEFT].push(modeSelector);
+}
+
+// Sets a listener on a radio button to change the filter type on Places
+// Autocomplete.
+AutocompleteDirectionsHandler.prototype.setupClickListener = function(
+    id, mode) {
+  var radioButton = document.getElementById(id);
+  var me = this;
+
+  radioButton.addEventListener('click', function() {
+    me.travelMode = mode;
+    me.route();
+  });
+};
+
+AutocompleteDirectionsHandler.prototype.setupPlaceChangedListener = function(
+    autocomplete, mode) {
+  var me = this;
+  autocomplete.bindTo('bounds', this.map);
+
+  autocomplete.addListener('place_changed', function() {
+    var place = autocomplete.getPlace();
+
+    if (!place.place_id) {
+      window.alert('Please select an option from the dropdown list.');
+      return;
+    }
+    if (mode === 'ORIG') {
+      me.originPlaceId = place.place_id;
+    } else {
+      me.destinationPlaceId = place.place_id;
+    }
+    me.route();
+  });
+};
+
+AutocompleteDirectionsHandler.prototype.route = function() {
+  if (!this.originPlaceId || !this.destinationPlaceId) {
+    return;
+  }
+  var me = this;
+
+  this.directionsService.route(
+      {
+        origin: {'placeId': this.originPlaceId},
+        destination: {'placeId': this.destinationPlaceId},
+        travelMode: this.travelMode
+      },
+      function(response, status) {
+        if (status === 'OK') {
+          me.directionsRenderer.setDirections(response);
+          this.finalroute = response.routes[0];
+          var route = response.routes[0].legs[0].steps;
+          var debugArea = document.getElementById("debugArea");
+          tempCordi = [];
+          //debugArea.innerHTML = "";
+          debugArea.innerHTML = (route[0].end_location.lng());
+          debugArea1.innerHTML = route.length;
+          for (var i = 0; i < route.length; i++){
+            if (i==0){
+              tempCordi.push(route[i].start_location);
+              tempCordi.push(route[i].end_location);
+            }else{
+              tempCordi.push(route[i].end_location);
+            }
+          }
+          debugArea2.innerHTML = tempCordi[0].lat();
+          me.routeCordi = tempCordi;
+          debugArea3.innerHTML = "handle.routeCordi: "+me.routeCordi[0].lng();
+          debugArea4.innerHTML = "tempCordi: "+tempCordi[0].lat();
+        } else {
+          window.alert('Directions request failed due to ' + status);
+        }
+      });
+};
+//google.maps.event.addDomListener(window, 'load', initialize);
+
+    </script>
+    <script src="https://sdk.amazonaws.com/js/aws-sdk-2.7.16.min.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDcORZBG6sPNJaw4fJZ6RZoSRUJxTWpo1I&libraries=places&callback=initMap"
+        async defer></script>
+  </body>
+</html>
